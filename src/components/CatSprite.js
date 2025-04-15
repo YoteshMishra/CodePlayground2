@@ -6,8 +6,8 @@ const CatSprite = ({
   blocks, 
   position, 
   isActive, 
-  isSelected,
-  onSelect,
+  isSelected = false, 
+  onSelect, 
   onExecutionDone, 
   onPositionUpdate 
 }) => {
@@ -27,33 +27,40 @@ const CatSprite = ({
     const executeBlocks = async () => {
       executeRef.current.isRunning = true;
       
-      for (let block of blocks) {
-        try {
+      try {
+        for (let block of blocks) {
           switch (block.type) {
             case 'move':
-              setPos((prev) => ({ ...prev, x: prev.x + block.value }));
+         
+              const steps = parseInt(block.value) || 0;
+              setPos((prev) => ({ ...prev, x: prev.x + steps }));
               await new Promise((res) => setTimeout(res, 300));
               break;
               
             case 'turn':
-              setRotation(prev => prev + block.value);
+              const degrees = parseInt(block.value) || 0;
+              setRotation(prev => prev + degrees);
               await new Promise((res) => setTimeout(res, 300));
               break;
               
             case 'goto':
-              setPos({ x: block.x, y: block.y });
+              const x = parseInt(block.x) || 0;
+              const y = parseInt(block.y) || 0;
+              setPos({ x, y });
               await new Promise((res) => setTimeout(res, 300));
               break;
               
             case 'repeat':
-              for (let i = 0; i < block.count; i++) {
+              const count = parseInt(block.count) || 0;
+              for (let i = 0; i < count; i++) {
                 setPos((prev) => ({ ...prev, x: prev.x + 10 }));
                 await new Promise((res) => setTimeout(res, 200));
               }
               break;
               
             case 'wait':
-              await new Promise((res) => setTimeout(res, block.time * 1000));
+              const time = parseFloat(block.time) || 0;
+              await new Promise((res) => setTimeout(res, time * 1000));
               break;
               
             case 'say':
@@ -71,13 +78,13 @@ const CatSprite = ({
             default:
               break;
           }
-        } catch (error) {
-          console.error("Error executing block:", error);
         }
+      } catch (error) {
+        console.error("Error executing blocks:", error);
+      } finally {
+        executeRef.current.isRunning = false;
+        if (onExecutionDone) onExecutionDone();
       }
-      
-      executeRef.current.isRunning = false;
-      if (onExecutionDone) onExecutionDone();
     };
 
     if (isActive) {
@@ -92,59 +99,52 @@ const CatSprite = ({
   }, [pos, id, onPositionUpdate]);
 
   const handleDrag = (e) => {
-    if (e.clientX === 0 && e.clientY === 0) return; // Prevent invalid values
+    if (e.clientX === 0 && e.clientY === 0) return; 
     
     if (onPositionUpdate) {
       onPositionUpdate(id, { 
-        x: e.clientX - e.target.width / 2, 
-        y: e.clientY - e.target.height / 2 
+        x: e.clientX - 32, 
+        y: e.clientY - 32  
       });
     }
   };
 
-  const handleClick = () => {
-    if (onSelect) {
-      onSelect(id);
-    }
+  const spriteStyle = {
+    left: `${pos.x}px`, 
+    top: `${pos.y}px`,
+    transform: `rotate(${rotation}deg)`,
+    border: isSelected ? '3px solid blue' : 'none',
+    borderRadius: isSelected ? '50%' : '0',
+    cursor: 'pointer',
+    zIndex: isSelected ? 10 : 1
   };
 
   return (
     <div 
       className="absolute"
-      style={{ 
-        left: `${pos.x}px`, 
-        top: `${pos.y}px`,
-        transform: `rotate(${rotation}deg)`
-      }}
-      onClick={handleClick}
+      style={spriteStyle}
+      onClick={onSelect}
     >
       {sayText && (
-        <div className="bg-white rounded-lg p-2 mb-2 border text-center">
+        <div className="absolute -top-12 left-0 bg-white rounded-lg p-2 border text-center min-w-32">
           {sayText}
         </div>
       )}
       
       {thinkText && (
-        <div className="bg-white rounded-full p-2 mb-2 border text-center">
-          {thinkText}
+        <div className="absolute -top-12 left-0 bg-white rounded-full p-2 border text-center min-w-32">
+          <span role="img" aria-label="thinking">💭</span> {thinkText}
         </div>
       )}
       
       <img
         src="/cat.png"
         alt="cat"
-        className={`w-16 h-16 ${isSelected ? 'ring-4 ring-blue-500' : ''}`}
-        style={{ cursor: 'pointer' }}
+        className="w-16 h-16"
         draggable
         onDrag={handleDrag}
         onDragEnd={handleDrag}
       />
-      
-      {isSelected && (
-        <div className="absolute -bottom-6 left-0 right-0 text-center text-xs bg-blue-500 text-white px-1 rounded">
-          Selected
-        </div>
-      )}
     </div>
   );
 };

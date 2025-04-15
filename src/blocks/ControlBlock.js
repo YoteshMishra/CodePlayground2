@@ -1,45 +1,54 @@
-import React, { useState } from 'react';
+import React, { useRef } from 'react';
 
 const ControlBlock = ({ onDragStart }) => {
-  const [repeatCount, setRepeatCount] = useState(10);
-  const [waitTime, setWaitTime] = useState(1);
+  const repeatCountRef = useRef(null);
+  const waitTimeRef = useRef(null);
 
-  const handleRepeatDragStart = (e) => {
-    onDragStart(e, { type: 'repeat', count: repeatCount });
+  const handleRepeatBlockDrag = (e) => {
+    const count = parseInt(repeatCountRef.current?.value) || 0;
+    onDragStart(e, { type: 'repeat', count });
   };
 
-  const handleWaitDragStart = (e) => {
-    onDragStart(e, { type: 'wait', time: waitTime });
+  const handleWaitBlockDrag = (e) => {
+    const time = parseFloat(waitTimeRef.current?.value) || 0;
+    onDragStart(e, { type: 'wait', time });
   };
 
   return (
-    <div className="p-2 border rounded bg-orange-200">
-      <h2 className="font-bold text-orange-700 mb-2">Control</h2>
+    <div className="p-2 border rounded bg-yellow-200">
+      <h2 className="font-bold text-yellow-700 mb-2">Control</h2>
+
       <div
-        className="control-block cursor-move mb-2"
+        className="control-block cursor-move mb-2 p-2 bg-yellow-100 rounded"
         draggable
-        onDragStart={handleRepeatDragStart}
+        onDragStart={handleRepeatBlockDrag}
       >
-        Repeat <input 
-          type="number" 
-          value={repeatCount}
-          onChange={(e) => setRepeatCount(parseInt(e.target.value))} 
-          className="w-12 inline mx-1" 
-        /> times
+        Repeat
+        <input
+          type="number"
+          defaultValue={3}
+          ref={repeatCountRef}
+          className="w-16 inline mx-1 border p-1"
+          min="1"
+        />
+        times
       </div>
 
       <div
-        className="control-block cursor-move mb-2"
+        className="control-block cursor-move mb-2 p-2 bg-yellow-100 rounded"
         draggable
-        onDragStart={handleWaitDragStart}
+        onDragStart={handleWaitBlockDrag}
       >
-        Wait <input 
-          type="number" 
-          value={waitTime}
-          onChange={(e) => setWaitTime(parseFloat(e.target.value))} 
-          step="0.1" 
-          className="w-12 inline mx-1" 
-        /> seconds
+        Wait
+        <input
+          type="number"
+          defaultValue={1}
+          ref={waitTimeRef}
+          className="w-16 inline mx-1 border p-1"
+          min="0"
+          step="0.1"
+        />
+        sec
       </div>
     </div>
   );
