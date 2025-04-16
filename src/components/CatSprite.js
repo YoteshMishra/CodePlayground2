@@ -1,4 +1,3 @@
-// CatSprite.js
 import React, { useEffect, useState, useRef } from 'react';
 
 const CatSprite = ({ 
@@ -9,12 +8,13 @@ const CatSprite = ({
   isSelected = false, 
   onSelect, 
   onExecutionDone, 
-  onPositionUpdate 
+  onPositionUpdate
 }) => {
   const [pos, setPos] = useState(position);
   const [sayText, setSayText] = useState('');
   const [thinkText, setThinkText] = useState('');
   const [rotation, setRotation] = useState(0);
+  const [isColliding, setIsColliding] = useState(false);
   const executeRef = useRef({ isRunning: false });
 
   useEffect(() => {
@@ -31,7 +31,6 @@ const CatSprite = ({
         for (let block of blocks) {
           switch (block.type) {
             case 'move':
-         
               const steps = parseInt(block.value) || 0;
               setPos((prev) => ({ ...prev, x: prev.x + steps }));
               await new Promise((res) => setTimeout(res, 300));
@@ -83,14 +82,14 @@ const CatSprite = ({
         console.error("Error executing blocks:", error);
       } finally {
         executeRef.current.isRunning = false;
-        if (onExecutionDone) onExecutionDone();
+        if (onExecutionDone) onExecutionDone(id);
       }
     };
 
     if (isActive) {
       executeBlocks();
     }
-  }, [isActive, blocks, onExecutionDone]);
+  }, [isActive, blocks, id, onExecutionDone]);
 
   useEffect(() => {
     if (onPositionUpdate) {
@@ -109,14 +108,27 @@ const CatSprite = ({
     }
   };
 
+  // Animation for collision effect
+  useEffect(() => {
+    let timer;
+    if (isColliding) {
+      timer = setTimeout(() => {
+        setIsColliding(false);
+      }, 500);
+    }
+    return () => clearTimeout(timer);
+  }, [isColliding]);
+
   const spriteStyle = {
     left: `${pos.x}px`, 
     top: `${pos.y}px`,
     transform: `rotate(${rotation}deg)`,
-    border: isSelected ? '3px solid blue' : 'none',
-    borderRadius: isSelected ? '50%' : '0',
+    border: isSelected ? '3px solid blue' : isColliding ? '3px solid red' : 'none',
+    borderRadius: isSelected || isColliding ? '50%' : '0',
     cursor: 'pointer',
-    zIndex: isSelected ? 10 : 1
+    zIndex: isSelected ? 10 : 1,
+    transition: isColliding ? 'transform 0.2s ease-in-out, border-color 0.2s ease-in-out' : '',
+    animation: isColliding ? 'shake 0.5s' : ''
   };
 
   return (
@@ -125,6 +137,16 @@ const CatSprite = ({
       style={spriteStyle}
       onClick={onSelect}
     >
+      <style>
+        {`
+          @keyframes shake {
+            0%, 100% { transform: rotate(${rotation}deg); }
+            10%, 30%, 50%, 70%, 90% { transform: rotate(${rotation - 5}deg); }
+            20%, 40%, 60%, 80% { transform: rotate(${rotation + 5}deg); }
+          }
+        `}
+      </style>
+      
       {sayText && (
         <div className="absolute -top-12 left-0 bg-white rounded-lg p-2 border text-center min-w-32">
           {sayText}

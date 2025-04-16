@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import MidArea from './components/MidArea';
 import CatSprite from './components/CatSprite';
@@ -10,6 +10,7 @@ export default function App() {
     { id: 1, blocks: [], position: { x: 100, y: 100 }, isActive: false }
   ]);
   const [selectedSpriteId, setSelectedSpriteId] = useState(1);
+  const spriteRefs = useRef({});
 
   const handleDropBlock = (block) => {
     setSprites((prevSprites) =>
@@ -30,9 +31,7 @@ export default function App() {
       const spriteToUpdate = { ...updatedSprites[spriteIndex] };
       const newBlocks = [...spriteToUpdate.blocks];
       
-   
       const [movedBlock] = newBlocks.splice(fromIndex, 1);
-    
       newBlocks.splice(toIndex, 0, movedBlock);
       
       spriteToUpdate.blocks = newBlocks;
@@ -51,7 +50,6 @@ export default function App() {
   };
 
   const handlePlay = () => {
- 
     setSprites(prev => 
       prev.map(sprite => ({ ...sprite, isActive: true }))
     );
@@ -62,25 +60,30 @@ export default function App() {
   };
 
   const handleExecutionDone = (id) => {
-
     setSprites(prev =>
       prev.map(sprite =>
         sprite.id === id ? { ...sprite, isActive: false } : sprite
       )
     );
 
- 
     checkCollisions();
   };
 
   const checkCollisions = () => {
     if (sprites.length <= 1) return;
     
-
     for (let i = 0; i < sprites.length; i++) {
       for (let j = i + 1; j < sprites.length; j++) {
         if (isColliding(sprites[i].position, sprites[j].position)) {
- 
+          // Trigger visual collision effect
+          if (spriteRefs.current[sprites[i].id]) {
+            spriteRefs.current[sprites[i].id].setIsColliding(true);
+          }
+          if (spriteRefs.current[sprites[j].id]) {
+            spriteRefs.current[sprites[j].id].setIsColliding(true);
+          }
+          
+          // Handle the blocks exchange
           handleCollision(sprites[i].id, sprites[j].id);
         }
       }
@@ -95,7 +98,7 @@ export default function App() {
       
       if (sprite1Index === -1 || sprite2Index === -1) return prev;
       
-  
+      // Exchange blocks between sprites
       const temp = [...newSprites[sprite1Index].blocks];
       newSprites[sprite1Index].blocks = [...newSprites[sprite2Index].blocks];
       newSprites[sprite2Index].blocks = temp;
@@ -105,16 +108,36 @@ export default function App() {
   };
 
   const addSprite = () => {
-    const newId = sprites.length + 1;
+    const newId = Math.max(...sprites.map(s => s.id)) + 1;
+    
+    // Calculate a position that's visible in the preview area
+    // Position X between 50-300px, Y between 50-300px
+    const randomX = Math.floor(Math.random() * 250) + 50;
+    const randomY = Math.floor(Math.random() * 250) + 50;
+    
     setSprites(prev => [
       ...prev,
       {
         id: newId,
         blocks: [],
-        position: { x: 200, y: 200 },
+        position: { x: randomX, y: randomY },
         isActive: false
       }
     ]);
+  };
+
+  const removeSprite = (id) => {
+    if (sprites.length <= 1) return; // Keep at least one sprite
+    
+    setSprites(prev => prev.filter(sprite => sprite.id !== id));
+    
+    // If we're removing the selected sprite, select another one
+    if (selectedSpriteId === id) {
+      const remainingSprites = sprites.filter(sprite => sprite.id !== id);
+      if (remainingSprites.length > 0) {
+        setSelectedSpriteId(remainingSprites[0].id);
+      }
+    }
   };
 
   const selectedSprite = sprites.find(s => s.id === selectedSpriteId) || sprites[0];
@@ -128,28 +151,42 @@ export default function App() {
       />
       <MidArea 
         onDropBlock={handleDropBlock} 
-        blocks={selectedSprite.blocks}
+        blocks={selectedSprite?.blocks || []}
         onReorderBlocks={handleReorderBlocks}
       />
 
       <div className="w-1/4 relative bg-gray-100 border-l">
         <div className="relative h-full">
           {sprites.map((sprite) => (
-            <CatSprite
-              key={sprite.id}
-              id={sprite.id}
-              blocks={sprite.blocks}
-              position={sprite.position}
-              isActive={sprite.isActive}
-              isSelected={selectedSpriteId === sprite.id}
-              onSelect={() => handleSpriteSelect(sprite.id)}
-              onExecutionDone={() => handleExecutionDone(sprite.id)}
-              onPositionUpdate={updateSpritePosition}
-            />
+            <div key={sprite.id} className="relative">
+              <CatSprite
+                ref={(el) => spriteRefs.current[sprite.id] = el}
+                id={sprite.id}
+                blocks={sprite.blocks}
+                position={sprite.position}
+                isActive={sprite.isActive}
+                isSelected={selectedSpriteId === sprite.id}
+                onSelect={() => handleSpriteSelect(sprite.id)}
+                onExecutionDone={handleExecutionDone}
+                onPositionUpdate={updateSpritePosition}
+              />
+              {selectedSpriteId === sprite.id && (
+                <button
+                  onClick={() => removeSprite(sprite.id)}
+                  className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                  style={{ 
+                    transform: 'translate(50%, -50%)',
+                    display: sprites.length > 1 ? 'flex' : 'none'
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
           ))}
         </div>
 
-        <div className="absolute bottom-4 left-4">
+        <div className="absolute bottom-4 left-4 flex flex-col">
           <PlayButton onClick={handlePlay} />
           <button
             onClick={addSprite}
