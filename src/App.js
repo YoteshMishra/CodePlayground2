@@ -3,7 +3,7 @@ import Sidebar from './components/Sidebar';
 import MidArea from './components/MidArea';
 import CatSprite from './components/CatSprite';
 import PlayButton from './components/PlayButton';
-import { isColliding } from './utils/collision';
+import detectCollision from './utils/collision'; // Update this import if your function name is different
 
 export default function App() {
   const [sprites, setSprites] = useState([
@@ -13,27 +13,48 @@ export default function App() {
       position: { x: 100, y: 100 }, 
       isActive: false,
       isHero: true,
-      animations: {
-        dance: { animation: 'bounce 1s infinite' },
-        spin: { animation: 'spin 2s infinite linear' }
-      }
+      animations: []
     }
   ]);
   const [selectedSpriteId, setSelectedSpriteId] = useState(1);
   const [isResetting, setIsResetting] = useState(false);
-  const spriteRefs = useRef({});
+  const [collisions, setCollisions] = useState([]);
   const initialPositionsRef = useRef({});
+  const spritesRef = useRef({});
+  const initialBlocksRef = useRef({});
 
-  // Store initial positions when adding sprites
+
   useEffect(() => {
     sprites.forEach(sprite => {
       if (!initialPositionsRef.current[sprite.id]) {
         initialPositionsRef.current[sprite.id] = { ...sprite.position };
+        initialBlocksRef.current[sprite.id] = [];
       }
     });
   }, [sprites]);
 
+
+  useEffect(() => {
+    const heroSprite = sprites.find(s => s.isHero);
+    if (!heroSprite) return;
+
+    const newCollisions = sprites
+      .filter(s => !s.isHero)
+      .map(sprite => {
+        const isColliding = detectCollision(
+          heroSprite.position,
+          sprite.position,
+          60 
+        );
+        return { spriteId: sprite.id, isColliding };
+      });
+    
+    setCollisions(newCollisions);
+  }, [sprites]);
+
   const handleDropBlock = (block) => {
+    if (!block || !block.type) return; 
+
     setSprites((prevSprites) =>
       prevSprites.map((sprite) =>
         sprite.id === selectedSpriteId
@@ -44,6 +65,8 @@ export default function App() {
   };
 
   const handleReorderBlocks = (fromIndex, toIndex) => {
+    if (fromIndex < 0 || toIndex < 0) return; 
+
     setSprites(prevSprites => {
       const updatedSprites = [...prevSprites];
       const spriteIndex = updatedSprites.findIndex(s => s.id === selectedSpriteId);
@@ -51,6 +74,8 @@ export default function App() {
       
       const spriteToUpdate = { ...updatedSprites[spriteIndex] };
       const newBlocks = [...spriteToUpdate.blocks];
+      
+      if (fromIndex >= newBlocks.length) return prevSprites; 
       
       const [movedBlock] = newBlocks.splice(fromIndex, 1);
       newBlocks.splice(toIndex, 0, movedBlock);
@@ -63,6 +88,8 @@ export default function App() {
   };
 
   const updateSpritePosition = (id, position) => {
+    if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') return; // Validate position
+
     setSprites(prev =>
       prev.map(sprite =>
         sprite.id === id ? { ...sprite, position } : sprite
@@ -78,14 +105,17 @@ export default function App() {
 
   const handleReset = () => {
     setIsResetting(true);
-    // Reset all sprites to their initial positions
+
+
     setSprites(prev => 
-      prev.map(sprite => ({ 
+      prev.map(sprite => ({
         ...sprite, 
         isActive: false,
-        position: initialPositionsRef.current[sprite.id] || sprite.position
+        position: initialPositionsRef.current[sprite.id] || sprite.position,
+        blocks: [] 
       }))
     );
+
     setTimeout(() => setIsResetting(false), 100);
   };
 
@@ -99,60 +129,16 @@ export default function App() {
         sprite.id === id ? { ...sprite, isActive: false } : sprite
       )
     );
-
-    checkCollisions();
-  };
-
-  const checkCollisions = () => {
-    if (sprites.length <= 1) return;
-    
-    for (let i = 0; i < sprites.length; i++) {
-      for (let j = i + 1; j < sprites.length; j++) {
-        if (isColliding(sprites[i].position, sprites[j].position)) {
-          // Trigger visual collision effect
-          if (spriteRefs.current[sprites[i].id]) {
-            spriteRefs.current[sprites[i].id].setIsColliding(true);
-          }
-          if (spriteRefs.current[sprites[j].id]) {
-            spriteRefs.current[sprites[j].id].setIsColliding(true);
-          }
-          
-          // Handle the blocks exchange
-          handleCollision(sprites[i].id, sprites[j].id);
-        }
-      }
-    }
-  };
-
-  const handleCollision = (id1, id2) => {
-    setSprites(prev => {
-      const newSprites = [...prev];
-      const sprite1Index = newSprites.findIndex(s => s.id === id1);
-      const sprite2Index = newSprites.findIndex(s => s.id === id2);
-      
-      if (sprite1Index === -1 || sprite2Index === -1) return prev;
-      
-      // Exchange blocks between sprites
-      const temp = [...newSprites[sprite1Index].blocks];
-      newSprites[sprite1Index].blocks = [...newSprites[sprite2Index].blocks];
-      newSprites[sprite2Index].blocks = temp;
-      
-      return newSprites;
-    });
   };
 
   const addSprite = () => {
-    const newId = Math.max(...sprites.map(s => s.id)) + 1;
-    
-    // Calculate a position that's visible in the preview area
-    // Position X between 50-300px, Y between 50-300px
+    const newId = Math.max(...sprites.map(s => s.id), 0) + 1;
     const randomX = Math.floor(Math.random() * 250) + 50;
     const randomY = Math.floor(Math.random() * 250) + 50;
-    
     const newPosition = { x: randomX, y: randomY };
     
-    // Store initial position
     initialPositionsRef.current[newId] = { ...newPosition };
+    initialBlocksRef.current[newId] = [];
     
     setSprites(prev => [
       ...prev,
@@ -162,24 +148,21 @@ export default function App() {
         position: newPosition,
         isActive: false,
         isHero: false,
-        animations: {
-          wiggle: { animation: 'wiggle 1s ease-in-out' },
-          pulse: { animation: 'pulse 2s infinite' }
-        }
+        animations: []
       }
     ]);
+    
+ 
+    setSelectedSpriteId(newId);
   };
 
   const removeSprite = (id) => {
-    if (sprites.length <= 1) return; // Keep at least one sprite
+    if (sprites.length <= 1) return;  
     
     setSprites(prev => prev.filter(sprite => sprite.id !== id));
-    
-    // Clean up references
-    delete spriteRefs.current[id];
     delete initialPositionsRef.current[id];
+    delete initialBlocksRef.current[id];
     
-    // If we're removing the selected sprite, select another one
     if (selectedSpriteId === id) {
       const remainingSprites = sprites.filter(sprite => sprite.id !== id);
       if (remainingSprites.length > 0) {
@@ -192,84 +175,119 @@ export default function App() {
     setSprites(prev => 
       prev.map(sprite => ({
         ...sprite,
-        isHero: sprite.id === id ? true : false
+        isHero: sprite.id === id
       }))
     );
   };
 
-  const addAnimationToSprite = (id, animationName, animationStyle) => {
+  const handleAddAnimationBlock = (animationName, duration) => {
+    if (!animationName) return; 
+    
     setSprites(prev => 
       prev.map(sprite => {
-        if (sprite.id === id) {
-          return {
-            ...sprite,
-            animations: {
-              ...sprite.animations,
-              [animationName]: animationStyle
-            }
+        if (sprite.id === selectedSpriteId) {
+          const newBlock = {
+            type: 'animation',
+            animationName,
+            duration: duration || 1000 
           };
+          return { ...sprite, blocks: [...sprite.blocks, newBlock] };
         }
         return sprite;
       })
     );
   };
 
-  const selectedSprite = sprites.find(s => s.id === selectedSpriteId) || sprites[0];
+  const handleAddRepeatSubBlocks = (parentIndex, subBlock) => {
+    if (parentIndex < 0 || !subBlock) return; 
+    
+    setSprites(prev => {
+      const updatedSprites = [...prev];
+      const spriteIndex = updatedSprites.findIndex(s => s.id === selectedSpriteId);
+      if (spriteIndex === -1) return prev;
+      
+      const spriteToUpdate = { ...updatedSprites[spriteIndex] };
+      const newBlocks = [...spriteToUpdate.blocks];
+      
+      if (parentIndex >= newBlocks.length) return prev; 
+      
+      const blockToUpdate = { ...newBlocks[parentIndex] };
+      
+      if (!blockToUpdate.subBlocks) {
+        blockToUpdate.subBlocks = [];
+      }
+      
+      blockToUpdate.subBlocks = [...blockToUpdate.subBlocks, subBlock];
+      newBlocks[parentIndex] = blockToUpdate;
+      
+      spriteToUpdate.blocks = newBlocks;
+      updatedSprites[spriteIndex] = spriteToUpdate;
+      
+      return updatedSprites;
+    });
+  };
+
+  const handleUpdateBlock = (index, updatedBlock) => {
+    if (index < 0 || !updatedBlock) return; 
+    
+    setSprites(prev => {
+      const updatedSprites = [...prev];
+      const spriteIndex = updatedSprites.findIndex(s => s.id === selectedSpriteId);
+      if (spriteIndex === -1) return prev;
+      
+      const spriteToUpdate = { ...updatedSprites[spriteIndex] };
+      const newBlocks = [...spriteToUpdate.blocks];
+      
+      if (index >= newBlocks.length) return prev; 
+      
+      newBlocks[index] = updatedBlock;
+      
+      spriteToUpdate.blocks = newBlocks;
+      updatedSprites[spriteIndex] = spriteToUpdate;
+      
+      return updatedSprites;
+    });
+  };
+
+  const handleRemoveBlock = (index) => {
+    if (index < 0) return; 
+    
+    setSprites(prev => 
+      prev.map(sprite => {
+        if (sprite.id === selectedSpriteId) {
+          const newBlocks = [...sprite.blocks];
+          if (index < newBlocks.length) { 
+            newBlocks.splice(index, 1);
+          }
+          return { ...sprite, blocks: newBlocks };
+        }
+        return sprite;
+      })
+    );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar
-        onDragStart={(e, type) =>
-          e.dataTransfer.setData('blockType', JSON.stringify(type))
+      <Sidebar onDragStart={(e, type) => {
+        if (type) {
+          e.dataTransfer.setData('blockType', JSON.stringify(type));
         }
-      />
+      }} />
       <MidArea 
         onDropBlock={handleDropBlock} 
-        blocks={selectedSprite?.blocks || []}
+        blocks={sprites.find(sprite => sprite.id === selectedSpriteId)?.blocks || []}
         onReorderBlocks={handleReorderBlocks}
-        onRemoveBlock={(index) => {
-          setSprites(prev => 
-            prev.map(sprite => {
-              if (sprite.id === selectedSpriteId) {
-                const newBlocks = [...sprite.blocks];
-                newBlocks.splice(index, 1);
-                return { ...sprite, blocks: newBlocks };
-              }
-              return sprite;
-            })
-          );
-        }}
-        onAddAnimationBlock={(animationName, duration) => {
-          const animationBlock = {
-            type: 'animation',
-            animationName,
-            duration
-          };
-          handleDropBlock(animationBlock);
-        }}
-        onAddRepeatSubBlocks={(index, subBlock) => {
-          setSprites(prev => 
-            prev.map(sprite => {
-              if (sprite.id === selectedSpriteId) {
-                const newBlocks = [...sprite.blocks];
-                if (!newBlocks[index].subBlocks) {
-                  newBlocks[index].subBlocks = [];
-                }
-                newBlocks[index].subBlocks.push(subBlock);
-                return { ...sprite, blocks: newBlocks };
-              }
-              return sprite;
-            })
-          );
-        }}
+        onRemoveBlock={handleRemoveBlock}
+        onAddAnimationBlock={handleAddAnimationBlock}
+        onAddRepeatSubBlocks={handleAddRepeatSubBlocks}
+        onUpdateBlock={handleUpdateBlock}
       />
-
       <div className="w-1/4 relative bg-gray-100 border-l">
-        <div className="relative h-full">
+        <div className="relative h-3/4 overflow-hidden border-b border-gray-300">
           {sprites.map((sprite) => (
             <div key={sprite.id} className="relative">
               <CatSprite
-                ref={(el) => spriteRefs.current[sprite.id] = el}
+                ref={el => spritesRef.current[sprite.id] = el}
                 id={sprite.id}
                 blocks={sprite.blocks}
                 position={sprite.position}
@@ -278,27 +296,29 @@ export default function App() {
                 isHero={sprite.isHero}
                 animations={sprite.animations}
                 onSelect={() => handleSpriteSelect(sprite.id)}
-                onExecutionDone={handleExecutionDone}
-                onPositionUpdate={updateSpritePosition}
+                onExecutionDone={() => handleExecutionDone(sprite.id)}
+                onPositionUpdate={(position) => updateSpritePosition(sprite.id, position)}
+                onDrag={(id, position) => {
+                  if (id && position) {
+                    updateSpritePosition(id, position);
+                  }
+                }}
               />
               {selectedSpriteId === sprite.id && (
                 <div className="absolute top-0 right-0 flex">
                   <button
                     onClick={() => toggleHero(sprite.id)}
                     className="bg-yellow-500 text-white rounded-full w-6 h-6 flex items-center justify-center mr-2"
-                    style={{ 
-                      transform: 'translate(0%, -50%)'
-                    }}
+                    style={{ transform: 'translate(0%, -50%)' }}
+                    title="Set as Hero"
                   >
                     👑
                   </button>
                   <button
                     onClick={() => removeSprite(sprite.id)}
                     className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                    style={{ 
-                      transform: 'translate(50%, -50%)',
-                      display: sprites.length > 1 ? 'flex' : 'none'
-                    }}
+                    style={{ transform: 'translate(50%, -50%)', display: sprites.length > 1 ? 'flex' : 'none' }}
+                    title="Remove Sprite"
                   >
                     ×
                   </button>
@@ -307,7 +327,6 @@ export default function App() {
             </div>
           ))}
         </div>
-
         <div className="absolute bottom-4 left-4 flex flex-col">
           <div className="flex space-x-2">
             <PlayButton onClick={handlePlay} />
@@ -325,21 +344,46 @@ export default function App() {
           >
             ➕ Add Sprite
           </button>
-          {selectedSpriteId && (
-            <div className="mt-2 bg-white p-2 rounded shadow">
-              <h3 className="font-bold">Selected Sprite: #{selectedSpriteId}</h3>
-              <div className="mt-1">
-                <button
-                  onClick={() => addAnimationToSprite(selectedSpriteId, `animation-${Date.now()}`, { animation: 'pulse 2s infinite' })}
-                  className="bg-purple-500 text-white px-2 py-1 rounded text-sm hover:bg-purple-600"
+          
+          <div className="mt-4">
+            <h3 className="text-sm font-bold mb-1">Collisions (Hero Only):</h3>
+            <div className="text-xs">
+              {sprites.some(s => s.isHero) && collisions.map(collision => (
+                <div 
+                  key={collision.spriteId} 
+                  className={collision.isColliding ? "text-red-500" : "text-green-500"}
                 >
-                  Add Custom Animation
-                </button>
-              </div>
+                  {collision.isColliding 
+                    ? `⚠️ Collision with Sprite ${collision.spriteId}` 
+                    : `✓ No collision with Sprite ${collision.spriteId}`}
+                </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
       </div>
+      
+      {/* Add global styles for animations */}
+      <style jsx global>{`
+        @keyframes dance {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-10px); }
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes wiggle {
+          0% { transform: translateX(-3px); }
+          50% { transform: translateX(3px); }
+          100% { transform: translateX(-3px); }
+        }
+        @keyframes jump {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-15px); }
+          100% { transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
