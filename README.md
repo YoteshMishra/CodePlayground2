@@ -1,6 +1,48 @@
-# Scratch starter project
+# 🧩 CodePlayground – A Visual Scratch-like Coding Environment Built with React
 
-To get started:
+![CodePlayground Preview](https://raw.githubusercontent.com/yoteshmishra1853/codeplayground/main/public/Preview.PNG)
 
-- Run `npm i` to install dependencies
-- Run `npm start` and open http://localhost:3000 to see the app
+CodePlayground is a **visual programming platform** inspired by Scratch. It lets users drag-and-drop blocks to animate and control sprites, making it a fun and educational tool for learning how code logic works—especially for children and beginners.
+
+---
+
+## 🚀 Features
+
+- 🎯 **Drag-and-Drop Coding Blocks** — Motion, Looks, Control (Repeat, Wait)
+- 🐱 **Multiple Sprites** — Add and animate multiple sprite characters
+- 🎮 **Play Button** — Run the assigned instructions visually
+- 🤖 **Collision Logic** — Auto-swap logic blocks when sprites collide
+- 📦 **Reusable Block Logic** — Modular execution and animation framework
+- 📐 **Clean UI** — Sidebar, mid-coding area, and sprite preview pane
+
+---
+
+## 📸 Screenshots
+
+| Coding Area | Sprite Animation |
+|-------------|------------------|
+| ![Block UI](https://via.placeholder.com/300x200) | ![Sprite Move](https://via.placeholder.com/300x200) |
+
+---
+
+## 🏗️ Built With
+
+- ⚛️ React.js
+- 🧠 JavaScript (ES6)
+- 💨 TailwindCSS (utility-based styling)
+- 📂 Modular folder structure
+
+---
+
+## 🛠️ How to Run Locally
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/<your-username>/codeplayground.git
+cd codeplayground
+
+# 2. Install dependencies
+npm install
+
+# 3. Start the development server
+npm start
