@@ -21,7 +21,7 @@ CodePlayground is a **visual programming platform** inspired by Scratch. It lets
 
 | Coding Area | Sprite Animation |
 |-------------|------------------|
-| ![Block UI](https://via.placeholder.com/300x200) | ![Sprite Move](https://via.placeholder.com/300x200) |
+| ![Block UI](https://github.com/YoteshMishra/CodePlayground2/blob/9c93cce4dd3a442fb3756880f91c34bf9c8b2026/public/Code%20Area.PNG) | ![Sprite Move](https://github.com/YoteshMishra/CodePlayground2/blob/9c93cce4dd3a442fb3756880f91c34bf9c8b2026/public/Animation.PNG |
 
 ---
 
