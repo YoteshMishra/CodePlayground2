@@ -38,7 +38,7 @@ CodePlayground is a **visual programming platform** inspired by Scratch. It lets
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<your-username>/codeplayground.git
+git clone https://github.com/YoteshMishra/CodePlayground2.git
 cd codeplayground
 
 # 2. Install dependencies
