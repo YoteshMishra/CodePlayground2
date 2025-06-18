@@ -1,6 +1,6 @@
 # 🧩 CodePlayground – A Visual Scratch-like Coding Environment Built with React
 
-![CodePlayground Preview](https://raw.githubusercontent.com/yoteshmishra1853/codeplayground/main/public/Preview.PNG)
+![Preview](./public/preview.gif)
 
 CodePlayground is a **visual programming platform** inspired by Scratch. It lets users drag-and-drop blocks to animate and control sprites, making it a fun and educational tool for learning how code logic works—especially for children and beginners.
 
